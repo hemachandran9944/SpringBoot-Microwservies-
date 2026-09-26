@@ -1,8 +1,10 @@
 package Red.Booking.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,7 +24,8 @@ public class users {
     @GeneratedValue
     Long id;
 
-    @NotBlank
+
+    @Size(min = 2, max = 100, message = "Name must be between 2  and  100 characers")
     @NotBlank(message = "name fileds requried")
     @Column(name = "name", nullable = false)
     String name;
@@ -37,10 +40,12 @@ public class users {
     @NotBlank
     @Column(name = "password", nullable = false)
     @NotBlank(message = "password fileds requried")
+    @Size(min = 8, message = "Password must be at least 6 characters")
     String password;
 
 
     @Column(name = "otp", nullable = true)
+    @Size(min = 6, message = "OTP must be 6 digits")
     private String otp;
 
     @Column(name = "OTPExpiration", nullable = true)
@@ -49,5 +54,9 @@ public class users {
 
     @Column(name = "isVerified", nullable = false)
     private Boolean isVerified = false;
+
+    @Column(name = "role", nullable = true)
+    private String role;
+
 
 }
