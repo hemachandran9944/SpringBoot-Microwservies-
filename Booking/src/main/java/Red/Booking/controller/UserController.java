@@ -6,9 +6,7 @@ import Red.Booking.service.UserService;
 import Red.Booking.setting.JWTtoken;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.weaver.ast.Var;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -160,7 +158,8 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> updateUserDataWithById(@PathVariable Long id, @RequestBody users user) throws  RuntimeException{
         Map<String, Object> res = new LinkedHashMap<>();
         try {
-            users UpdateUserDateById = userService.updateById(id, user);
+
+            Map<String, Object> UpdateUserDateById = userService.updateById(id, user);
 
             if (UpdateUserDateById == null){
                 res.put("status", "error");
@@ -199,4 +198,27 @@ public class UserController {
         }
     }
 
+
+    @DeleteMapping("/deleteAllData")
+    public ResponseEntity<Map<String, Object>> deleteAllData() throws  RuntimeException{
+        Map<String, Object> res = new LinkedHashMap<>();
+        try{
+            long deleteCount = userService.deleteAllData();
+
+            if (deleteCount == 0){
+                res.put("status", "error");
+                res.put("message", "no record found");
+                return new ResponseEntity<>(res, HttpStatus.NOT_FOUND);
+            }
+
+            res.put("status", "success");
+            res.put("message", "delete all user data successfully!");
+            res.put("data", deleteCount);
+            return new ResponseEntity<>(res, HttpStatus.OK);
+        } catch (RuntimeException exception) {
+            res.put("status", "error");
+            res.put("message", exception.getMessage());
+            return new ResponseEntity<>(res, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

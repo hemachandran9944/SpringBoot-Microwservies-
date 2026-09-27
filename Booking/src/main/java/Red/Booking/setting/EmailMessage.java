@@ -7,10 +7,10 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 @Component
-public class EmailMessage {
+public class    EmailMessage {
 
     @Autowired
-    private JavaMailSender javaMailSender;
+    private JavaMailSender  javaMailSender;
 
     public  void registerOTP(String name,String gmail, String otp) throws RuntimeException{
         try{
@@ -35,6 +35,27 @@ public class EmailMessage {
         }
     }
 
+
+    public  void forgetPasswordOtp(String name, String gmail, String otp)throws  RuntimeException{
+        try{
+            SimpleMailMessage forgetEmail = new SimpleMailMessage();
+            forgetEmail.setTo(gmail);
+            forgetEmail.setSubject("ForgetPassowordOtp - Red Bus Booking");
+
+            String forgotPasswordMessage = "Hello " + name + ",\n\n" +
+                    "We received a request to reset the password for your Red Bus Booking account.\n\n" +
+                    "To proceed with your password reset, please use the One-Time Password (OTP) provided below:\n\n" +
+                    "Your Password Reset OTP: " + otp + "\n\n" +
+                    "This OTP is valid for 10 minutes. Please do not share this confidential code with anyone.\n\n" +
+                    "If you did not request a password reset, please ignore this email or contact support if you have concerns.\n\n" +
+                    "Best Regards,\n" +
+                    "Team Red Bus Booking";
+            forgetEmail.setText(forgotPasswordMessage);
+            javaMailSender.send(forgetEmail);
+        } catch (RuntimeException exception) {
+            throw new RuntimeException(exception.getMessage());
+        }
+    }
 
 
 }

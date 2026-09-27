@@ -7,17 +7,11 @@ import Red.Booking.setting.JWTtoken;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-
-
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
-
 
 @Slf4j
 @Service
@@ -36,26 +30,26 @@ public class UserService {
     private JWTtoken jwTtoken;
 
     @Transactional
-    public users ResgisterUser(users req ){
-        try{
-            if (req.getGmail() == null || req.getGmail().isEmpty()){
+    public users ResgisterUser(users req) {
+        try {
+            if (req.getGmail() == null || req.getGmail().isEmpty()) {
                 throw new RuntimeException("Email cannot be empty");
             }
 
-            if (req.getName() == null || req.getName().isEmpty()){
+            if (req.getName() == null || req.getName().isEmpty()) {
                 throw new RuntimeException("Name cannot be empty");
             }
 
-            if(req.getPassword() == null || req.getPassword().isEmpty()){
-                throw new RuntimeException("Password cannot be empty ");
+            if (req.getPassword() == null || req.getPassword().isEmpty()) {
+                throw new RuntimeException("Password cannot be empty");
             }
 
-            if (req.getPassword().length()<6){
-                throw new RuntimeException("must be at least 6 charactres");
+            if (req.getPassword().length() < 6) {
+                throw new RuntimeException("must be at least 6 characters");
             }
 
             Optional<users> existingUser = userRepository.findByGmail(req.getGmail());
-            if (existingUser.isPresent()){
+            if (existingUser.isPresent()) {
                 log.warn("User already exists with email:{}", req.getGmail());
                 throw new RuntimeException(req.getGmail());
             }
@@ -84,9 +78,21 @@ public class UserService {
         }
     }
 
+    @Transactional
+    public void sendVerificationOtp(users user, String otp) {
+        try {
+            user.setOtp(otp);
+            user.setOtpExpiration(LocalDateTime.now().plusMinutes(10));
+            userRepository.save(user);
+            emailMessage.registerOTP(user.getName(), user.getGmail(), otp);
+            log.info("OTP sent successfully to email:{}", user.getGmail());
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
 
 
-    private  String generateOTP() throws Exception{
+    private String generateOTP() throws Exception {
         try {
             Random random = new Random();
             int otp = 100000 + random.nextInt(900000);
@@ -96,38 +102,21 @@ public class UserService {
         }
     }
 
-
     @Transactional
-    public void sendVerificationOtp(users user, String otp){
+    public void verifyOtp(String gmail, String otp) {
         try {
-            user.setOtp(otp);
-            user.setOtpExpiration(LocalDateTime.now().plusMinutes(10));
-            userRepository.save(user);
-            emailMessage.registerOTP(user.getName(), user.getGmail(), otp);
-            log.info("OTP sent successfulley to email:{}", user.getGmail());
-        } catch (RuntimeException e) {
-            throw new RuntimeException(e.getMessage());
-        }
-    }
-
-
-
-    @Transactional
-    public void verifyOtp(String gmail, String otp){
-        try {
-
             users exitUser = userRepository.findByGmail(gmail)
-                    .orElseThrow(()-> new RuntimeException("user not foun"));
+                    .orElseThrow(() -> new RuntimeException("user not found"));
 
-            if (exitUser.getIsVerified()){
-                throw  new RuntimeException("already verified");
+            if (exitUser.getIsVerified()) {
+                throw new RuntimeException("already verified");
             }
 
-            if(exitUser.getOtp() == null || !exitUser.getOtp().equals(otp)){
+            if (exitUser.getOtp() == null || !exitUser.getOtp().equals(otp)) {
                 throw new RuntimeException("Wrong Otp");
             }
 
-            if (LocalDateTime.now().isAfter(exitUser.getOtpExpiration())){
+            if (LocalDateTime.now().isAfter(exitUser.getOtpExpiration())) {
                 throw new RuntimeException("Otp Expired");
             }
 
@@ -136,13 +125,12 @@ public class UserService {
             exitUser.setOtpExpiration(null);
             userRepository.save(exitUser);
 
-            log.info("OTP verified successfulley for email:{}", gmail);
+            log.info("OTP verified successfully for email:{}", gmail);
         } catch (RuntimeException e) {
             log.warn("OTP verification failed: {}", e.getMessage());
             throw e;
         }
     }
-
 
     public String userLogin(String gmail, String password) throws Exception {
         try {
@@ -174,8 +162,8 @@ public class UserService {
         }
     }
 
-    public Map<String, Object> getUserDataById(Long id) throws  RuntimeException{
-        try{
+    public Map<String, Object> getUserDataById(Long id) throws RuntimeException {
+        try {
             users user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -191,50 +179,59 @@ public class UserService {
         }
     }
 
-
-
-    public List<users> getAllUserData ()throws  RuntimeException{
-        try{
+    public List<users> getAllUserData() throws RuntimeException {
+        try {
             List<users> Getalldata = userRepository.findAll();
 
-            if (Getalldata.isEmpty()){
+            if (Getalldata.isEmpty()) {
                 throw new RuntimeException("No record not found!");
             }
-            return  Getalldata;
+            return Getalldata;
         } catch (RuntimeException e) {
             throw new RuntimeException(e.getMessage());
         }
     }
 
-
-    public users updateById(Long id , users user) throws RuntimeException{
+    public Map<String, Object> updateById(Long id, users user) throws RuntimeException {
         try {
             users findByUserId = userRepository.findById(id)
-                    .orElseThrow(()->new RuntimeException("user not found"));
+                    .orElseThrow(() -> new RuntimeException("user not found"));
 
             findByUserId.setName(user.getName());
             findByUserId.setGmail(user.getGmail());
-            return userRepository.save(findByUserId);
+
+            users updateUser = userRepository.save(findByUserId);
+
+            Map<String, Object> userMap = new LinkedHashMap<>();
+            userMap.put("id", updateUser.getId());
+            userMap.put("name", updateUser.getName());
+            userMap.put("gmail", updateUser.getGmail());
+
+            return userMap;
         } catch (RuntimeException e) {
             throw new RuntimeException(e.getMessage());
         }
     }
 
-
-    public void deleteById(Long id) throws RuntimeException{
+    public void deleteById(Long id) throws RuntimeException {
         try {
-           users deleteSigleUser =  userRepository.findById(id)
-                   .orElseThrow(()->new RuntimeException("user not found"));
-           userRepository.deleteById(id);
+            users deleteSigleUser = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("user not found"));
+            userRepository.deleteById(id);
+        } catch (RuntimeException exception) {
+            throw new RuntimeException(exception.getMessage());
+        }
+    }
+
+    public long deleteAllData() {
+        try {
+            final long DeleteCount = userRepository.count();
+            userRepository.deleteAll();
+            return DeleteCount;
         } catch (RuntimeException exception) {
             throw new RuntimeException(exception.getMessage());
         }
     }
 
 
-
 }
-
-
-
-
