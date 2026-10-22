@@ -10,3 +10,5 @@ public class BusServiceApplication {
         System.out.println("Bus Server is running successfuelly!");
 	}
 }
+
+

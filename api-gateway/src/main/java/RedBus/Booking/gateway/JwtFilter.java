@@ -71,7 +71,7 @@ public class JwtFilter implements GlobalFilter, Ordered {
             HttpMethod method = exchange.getRequest().getMethod();
             if (path.startsWith("/api/bus") &&
                     !HttpMethod.GET.equals(method) &&
-                    !admin.equals(role)) {
+                    !"ADMIN".equals(role)) {
                 return reject(exchange, HttpStatus.FORBIDDEN);
             }
 
