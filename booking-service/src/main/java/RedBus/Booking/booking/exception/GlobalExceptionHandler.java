@@ -2,14 +2,14 @@ package RedBus.Booking.booking.exception;
 
 import RedBus.Booking.booking.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageConversionException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -57,6 +57,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("Missing parameter: " + error.getParameterName()));
     }
+
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> integrity (DataIntegrityViolationException error){
+        log.warn("Data integrity violation: {}", error.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("Data conflict with existing records"));
+    }
+
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> unexpected(Exception error){
+        log.error("Unexpected error", error);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Something wrong. Please try again later"));
+    }
+
 
 
 
