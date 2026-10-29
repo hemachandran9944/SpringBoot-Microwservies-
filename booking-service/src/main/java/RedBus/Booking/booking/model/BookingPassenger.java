@@ -2,14 +2,14 @@ package RedBus.Booking.booking.model;
 
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "booking_passengers")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

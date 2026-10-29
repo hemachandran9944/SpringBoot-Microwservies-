@@ -19,8 +19,6 @@ import java.util.Map;
 @Slf4j
 public class JWTtoken {
 
-
-
     @Value("${jwt.secret}")
     private  String secret;
 

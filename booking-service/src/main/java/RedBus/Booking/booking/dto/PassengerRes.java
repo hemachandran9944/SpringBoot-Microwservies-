@@ -2,5 +2,4 @@ package RedBus.Booking.booking.dto;
 
 import java.math.BigDecimal;
 
-public record PassengerRes (String seatNumber, String passengerName, int age, String gender, BigDecimal fare){
-}
+public record PassengerRes(String seatNumber, String passengerName, String age, String gender, BigDecimal fare) {}
