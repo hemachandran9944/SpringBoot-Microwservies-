@@ -5,11 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,27 +20,29 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> notFound (NotFoundException error){
+    public ResponseEntity<ApiResponse<Void>> notFound(NotFoundException error) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(error.getMessage()));
     }
 
-
     @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ApiResponse<Void>> conflict(ConflictException error){
+    public ResponseEntity<ApiResponse<Void>> conflict(ConflictException error) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(error.getMessage()));
     }
 
-
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ApiResponse<Void>> forbidden (ForbiddenException error){
+    public ResponseEntity<ApiResponse<Void>> forbidden(ForbiddenException error) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(error.getMessage()));
     }
 
-    @ExceptionHandler(IllegalAccessException.class)
-    public ResponseEntity<ApiResponse<Void>> unvailable (IllegalArgumentException error){
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(error.getMessage()));
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> badRequest(IllegalArgumentException error) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(error.getMessage()));
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> serviceUnavailable(ServiceUnavailableException error) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiResponse.error(error.getMessage()));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> invalid(MethodArgumentNotValidException error) {
@@ -50,44 +53,34 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>("error", "Validation failed", errors));
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> unreadableBody(HttpMessageNotReadableException error) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("Invalid request body"));
+    }
 
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponse<Void>> missingHeader(MissingRequestHeaderException error) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Missing header: " + error.getHeaderName()));
+    }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ApiResponse<Void>> unreadable (MissingServletRequestParameterException error){
+    public ResponseEntity<ApiResponse<Void>> missingParam(MissingServletRequestParameterException error) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("Missing parameter: " + error.getParameterName()));
     }
 
-
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiResponse<Void>> integrity (DataIntegrityViolationException error){
+    public ResponseEntity<ApiResponse<Void>> integrity(DataIntegrityViolationException error) {
         log.warn("Data integrity violation: {}", error.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error("Data conflict with existing records"));
     }
 
-
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> unexpected(Exception error){
+    public ResponseEntity<ApiResponse<Void>> unexpected(Exception error) {
         log.error("Unexpected error", error);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Something wrong. Please try again later"));
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }

@@ -30,7 +30,6 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> Userresgister(@Valid @RequestBody Users req) throws Exception{
         Map<String, Object> res = new LinkedHashMap<>();
-
         try {
             Users resgisterUser = userService.ResgisterUser(req);
             res.put("status", "success");

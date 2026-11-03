@@ -3,6 +3,7 @@ package RedBus.Booking.gateway;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -18,7 +19,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-
+@Slf4j
 @Component
 public class JwtFilter implements GlobalFilter, Ordered {
     @Value("${jwt.secret}")
@@ -83,7 +84,6 @@ public class JwtFilter implements GlobalFilter, Ordered {
                     .header("X-User-Email", claims.getSubject())
                     .header("X-User-Role", role)
                     .build();
-
             return chain.filter(exchange.mutate().request(GatWayRequest).build());
         } catch (Exception error) {
             System.out.println("JWT error: " + error.getMessage());
@@ -92,6 +92,7 @@ public class JwtFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> reject(ServerWebExchange exchange, HttpStatus status) {
+        log.warn("Request rejected with status {}", status);
         exchange.getResponse().setStatusCode(status);
         return exchange.getResponse().setComplete();
     }

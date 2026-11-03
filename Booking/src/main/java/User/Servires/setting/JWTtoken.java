@@ -17,7 +17,7 @@ import java.util.Map;
 
 @Component
 @Slf4j
-public class JWTtoken {
+public class JWTtoken{
 
     @Value("${jwt.secret}")
     private  String secret;

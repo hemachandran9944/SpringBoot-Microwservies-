@@ -58,7 +58,7 @@ public class BusService {
     public Amenity createAmenity(AmenityReq req){
         if (amenityRepository.existsByNameIgnoreCase(req.name())){
             throw new ConflictException("AmiAmenity already exists:" + req.name());
-        }
+        }   
         return amenityRepository.save(Amenity.builder().name(req.name()).build());
 
     }

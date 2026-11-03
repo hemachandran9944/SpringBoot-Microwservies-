@@ -4,6 +4,8 @@ package RedBus.Booking.booking.service;
 import RedBus.Booking.booking.client.BusClient;
 import RedBus.Booking.booking.dto.*;
 import RedBus.Booking.booking.exception.ConflictException;
+import RedBus.Booking.booking.exception.ForbiddenException;
+import RedBus.Booking.booking.exception.NotFoundException;
 import RedBus.Booking.booking.model.*;
 import RedBus.Booking.booking.repository.BookingRepository;
 import RedBus.Booking.booking.repository.TripSeatRepository;
@@ -36,7 +38,6 @@ public class BookingService {
     public BookingRes createBooking(BookingReq req, String userEmail){
 
             /* Bus trip departed find out */
-
         TripInfo trip = busClient.getTrip(req.tripId());
         LocalDateTime departure = LocalDateTime.of(trip.travelDate(), trip.departureTime());
         if (departure.isBefore(LocalDateTime.now())){
@@ -79,7 +80,7 @@ public class BookingService {
                 .bookingRef(ref).tripId(trip.tripId() != null ? trip.tripId() : req.tripId())
                 .busId(trip.busId()).busName(trip.busName())
                 .source(trip.source()).destination(trip.destination())
-                .travelDate(trip.travelDate()).destination(trip.destination())
+                .travelDate(trip.travelDate()).departureTime(trip.departureTime())
                 .userEmail(userEmail)
                 .totalAmount(fare.multiply(BigDecimal.valueOf(req.passengers().size())))
                 .status(BookingStatus.PENDING)
@@ -113,12 +114,43 @@ public class BookingService {
 
 
 
+    @Transactional
+    public BookingRes confrim (String ref, String userEmail, String role){
+        Booking booking = findOwned(ref, userEmail, role);
+
+        if (booking.getStatus() == BookingStatus.CONFIRMED){
+            return toRespones(booking);  // idempotent
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING){
+            throw new IllegalArgumentException("Booking is" + booking.getStatus() + ", cannot confrim");
+        }
+
+        if (booking.getExpiresAt() != null && booking.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ConflictException("Seat lock expired. Please book again.");
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setExpiresAt(null);
+        tripSeatRepository.updateState(ref, SeatState.BOOKED);
+
+        log.info("Booking confrimed ref={}", ref);
+        return toRespones(booking);
+    }
 
 
 
+    /*Helper*/
+    private Booking findOwned (String ref, String userEmail, String role){
+        Booking booking = bookingRepository.findByBookingRef(ref)
+                .orElseThrow(()-> new NotFoundException("Booking not found:" + ref));
 
-
-
+        boolean admin = "ADMIN".equalsIgnoreCase(role);
+        if (!admin && !booking.getUserEmail().equalsIgnoreCase(userEmail)){
+            throw new ForbiddenException("This booking does not belong to you");
+        }
+        return booking;
+    }
 
 
 
@@ -150,6 +182,18 @@ public class BookingService {
                 res.getSource(), res.getDestination(), res.getTravelDate(), res.getDepartureTime(),
                 res.getTotalAmount(), res.getExpiresAt(), res.getCreatedAt(), passenger
         );
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     }
