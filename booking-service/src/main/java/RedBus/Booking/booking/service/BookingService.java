@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,6 +37,8 @@ public class BookingService {
 
     @Transactional
     public BookingRes createBooking(BookingReq req, String userEmail){
+        expireOverdue();
+
 
             /* Bus trip departed find out */
         TripInfo trip = busClient.getTrip(req.tripId());
@@ -115,7 +118,7 @@ public class BookingService {
 
 
     @Transactional
-    public BookingRes confrim (String ref, String userEmail, String role){
+    public BookingRes confrim (String ref, String userEmail, String role)   {
         Booking booking = findOwned(ref, userEmail, role);
 
         if (booking.getStatus() == BookingStatus.CONFIRMED){
@@ -139,8 +142,93 @@ public class BookingService {
     }
 
 
+    // Cancel Service
+    @Transactional
+    public BookingRes cancel (String ref, String userEmail, String role){
+        Booking booking = findOwned(ref, userEmail, role);
 
-    /*Helper*/
+        if (booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.EXPIRED){
+            throw new IllegalArgumentException("Booking is already" + booking.getStatus());
+        }
+
+        LocalDateTime departure =  LocalDateTime.of(booking.getTravelDate(), booking.getDepartureTime());
+
+        if (departure.isBefore(LocalDateTime.now())){
+            throw new IllegalArgumentException("Trip already departed,  cannot cancel");
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setExpiresAt(null);
+        tripSeatRepository.deleteByBookingRef(ref);
+
+        log.info("Booking cancelled ref={} by={}", ref, userEmail);
+        return toRespones(booking);
+    }
+
+
+    /*Read Service*/
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public BookingRes get(String ref, String userEmail, String role){
+        return toRespones(findOwned(ref, userEmail, role));
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<BookingRes> myBooking(String userEmail){
+        return bookingRepository.findByUserEmailOrderByCreatedAtDesc(userEmail)
+                .stream().map(this::toRespones).toList();
+    }
+
+
+
+
+    @Transactional
+    public List<SeatStatusRes> seatStatusRes (Long tripid){
+        expireOverdue();
+        
+        TripInfo trip = busClient.getTrip(tripid);
+
+        Map<String, TripSeat> taken = tripSeatRepository.findByTripId(tripid).stream()
+                .collect(Collectors.toMap(TripSeat :: getSeatNumber, Function.identity()));
+        List<String> layout = busClient.getSeatNumber(trip.busId());
+
+        if (layout.isEmpty()){
+            return taken.values().stream()
+                    .map(s -> new SeatStatusRes(s.getSeatNumber(), s.getState().name()))
+                    .sorted(Comparator.comparing(SeatStatusRes::seatNumber))
+                    .toList();
+        }
+
+        return layout.stream()
+                .map(s -> new SeatStatusRes(s, taken.containsKey(s) ? taken.get(s).getState().name() : "AVAILABLE"))
+                .toList();
+
+    }
+
+
+
+
+
+    /*Pending and time expired seat release*/
+    @Transactional
+    public int expireOverdue() {
+        List<Booking> overdue = bookingRepository
+                .findByStatusAndExpiresAtBefore(BookingStatus.PENDING, LocalDateTime.now());
+
+        for (Booking b : overdue){
+            b.setStatus(BookingStatus.EXPIRED);
+            tripSeatRepository.deleteByBookingRef(b.getBookingRef());
+        }
+        if (!overdue.isEmpty()){
+            log.info("Expired {} pending booking(s)", overdue.stream());
+        }
+        return overdue.size();
+    }
+
+
+
+
+    /* Bus Booking id  find */
     private Booking findOwned (String ref, String userEmail, String role){
         Booking booking = bookingRepository.findByBookingRef(ref)
                 .orElseThrow(()-> new NotFoundException("Booking not found:" + ref));
@@ -158,14 +246,13 @@ public class BookingService {
 
 
 
-
     /*Upper to LowerCase*/
-
     private String normalize(String seat){
         return seat.trim().toLowerCase(Locale.ROOT);
     }
 
 
+    // Trancasation  Random Id
     private String generateRef(){
         return "RB" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
     }
