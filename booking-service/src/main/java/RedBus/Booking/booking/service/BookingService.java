@@ -147,14 +147,14 @@ public class BookingService {
     public BookingRes cancel (String ref, String userEmail, String role){
         Booking booking = findOwned(ref, userEmail, role);
 
-        if (booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.EXPIRED){
-            throw new IllegalArgumentException("Booking is already" + booking.getStatus());
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.EXPIRED){
+            throw new IllegalArgumentException("Booking is already " + booking.getStatus());
         }
 
         LocalDateTime departure =  LocalDateTime.of(booking.getTravelDate(), booking.getDepartureTime());
 
         if (departure.isBefore(LocalDateTime.now())){
-            throw new IllegalArgumentException("Trip already departed,  cannot cancel");
+            throw new IllegalArgumentException("Trip already departed, cannot cancel");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);

@@ -22,6 +22,7 @@ import java.util.List;
 @Slf4j
 @Component
 public class JwtFilter implements GlobalFilter, Ordered {
+
     @Value("${jwt.secret}")
     private  String secret;
 
